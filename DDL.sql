@@ -1,3 +1,60 @@
+/*НОВЫЕ КОММЕНТАРИИ от 22 сентября 2024*/
+
+/*Создание таблицы стран country*/
+
+CREATE TABLE car_shop.country (
+    id SERIAL PRIMARY KEY, /*первичный ключ с автоинкрементом*/
+    brand_origin VARCHAR(100) /* в названии страны могут быть и цифры (по ошибке), и буквы, поэтому varchar.*/
+);
+
+/*Создание таблицы брэндов brand*/
+
+CREATE TABLE car_shop.brand (
+    id SERIAL PRIMARY KEY, /*первичный ключ с автоинкрементом*/
+    brand VARCHAR(100), /* в названии страны могут быть и цифры (по ошибке), и буквы, поэтому varchar.*/
+    country_id INTEGER /*внешний ключ к таблице country*/
+    CONSTRAINT fk_brand_country_id REFERENCES car_shop.country(id) ON DELETE RESTRICT
+    /*внешний ключ к таблице car_specification*/
+);
+
+/*Создание таблицы моделей model*/
+
+CREATE TABLE car_shop.model (
+    id SERIAL PRIMARY KEY, /*первичный ключ с автоинкрементом*/
+    model VARCHAR(30), /* в названии модели могут быть и цифры, и буквы, поэтому varchar.*/
+    gasoline_consumption NUMERIC(3, 1) NULL, /*потребление бензина не может быть трехзначным, поэтому оставляем двухзначную
+    цифру и одну цифру после запятой. У numeric повышенная точность при работе с дробными числами*/
+    brand_id INTEGER /*внешний ключ к таблице brand*/
+    CONSTRAINT fk_model_brand_id REFERENCES car_shop.brand(id) ON DELETE RESTRICT
+    /*внешний ключ к таблице car_specification*/
+);
+
+/*Удаление старой таблицы car_specification*/
+DROP TABLE car_shop.car_specification CASCADE;
+
+/*Удаление старой таблицы car_specification_possible*/
+DROP TABLE car_shop.car_specification_possible CASCADE;
+
+/*Создание таблицы car_specification, со всеми возможными комбинациями model + color*/
+
+CREATE TABLE car_shop.car_specification (
+    id SERIAL PRIMARY KEY, /*первичный ключ с автоинкрементом*/
+	model_id INTEGER CONSTRAINT fk_car_specification_model_id 
+    REFERENCES car_shop.model(id) ON DELETE RESTRICT,
+    /*внешний ключ к таблице car_specification*/
+	color_id INTEGER CONSTRAINT fk_car_specification_color_id 
+    REFERENCES car_shop.color(id) ON DELETE RESTRICT
+    /*внешний ключ к таблице color*/
+);
+
+/*Добавление CONSTRAINT car_id в таблицу shop.sales*/
+
+ALTER TABLE car_shop.sales
+ADD CONSTRAINT fk_sales_car_specification_id FOREIGN KEY (car_id)
+REFERENCES car_shop.car_specification(id)
+ON DELETE RESTRICT;
+
+/*СТАРЫЕ КОММЕНТАРИИ от 19 сентября 2024*/
 /*Добавьте в этот файл все запросы, для создания схемы данных автосалона и
  таблиц в ней в нужном порядке*/
 

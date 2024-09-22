@@ -1,3 +1,140 @@
+/*НОВЫЕ КОММЕНТАРИИ от 22 сентября 2024*/
+
+/*Наполнение таблицы стран country*/
+
+INSERT INTO car_shop.country (brand_origin)
+SELECT DISTINCT COALESCE(brand_origin, 'Unknown')
+FROM raw_data.sales
+ORDER BY COALESCE(brand_origin, 'Unknown');
+
+/*Наполнение таблицы брэндов brand, кроме поля country_id*/
+
+INSERT INTO car_shop.brand (brand)
+SELECT DISTINCT SPLIT_PART(auto, ' ', 1) AS brand
+FROM raw_data.sales
+ORDER BY brand;
+
+/*Наполнение поля country_id таблицы брэндов brand*/
+
+WITH temporary_table_1 AS (
+   SELECT DISTINCT SPLIT_PART(auto, ' ', 1) AS brand,
+          COALESCE(brand_origin, 'Unknown')  AS country
+   FROM raw_data.sales
+),
+temporary_table_2 AS (
+   SELECT t.brand, t.country, c.id
+   FROM temporary_table_1 AS t
+   RIGHT JOIN car_shop.brand AS b ON t.brand = b.brand
+   LEFT JOIN car_shop.country AS c ON t.country = c.brand_origin
+)
+UPDATE car_shop.brand
+SET country_id = temporary_table_2.id
+FROM temporary_table_2
+WHERE car_shop.brand.brand = temporary_table_2.brand;
+
+/*Наполнение таблицы моделей model, кроме поля brand_id*/
+
+INSERT INTO car_shop.model (model, gasoline_consumption)
+SELECT REPLACE(SPLIT_PART(SPLIT_PART(auto, ' ', 2) || ' ' || SPLIT_PART(auto, ' ', 3), ', ', 1), ',', '') AS model,
+       gasoline_consumption
+FROM raw_data.sales
+GROUP BY model, gasoline_consumption;
+
+/*Наполнение поля brand_id таблицы моделей model*/
+
+WITH temporary_table_1 AS (
+   SELECT DISTINCT SPLIT_PART(auto, ' ', 1) AS brand,
+          REPLACE(SPLIT_PART(SPLIT_PART(auto, ' ', 2) || ' ' || SPLIT_PART(auto, ' ', 3), ', ', 1), ',', '') AS model
+   FROM raw_data.sales
+),
+temporary_table_2 AS (
+   SELECT t.brand, t.model, b.id
+   FROM temporary_table_1 AS t
+   RIGHT JOIN car_shop.model AS m ON t.model = m.model
+   LEFT JOIN car_shop.brand AS b ON t.brand = b.brand
+)
+UPDATE car_shop.model
+SET brand_id = temporary_table_2.id
+FROM temporary_table_2
+WHERE car_shop.model.model = temporary_table_2.model;
+
+/*Удаление таблицы car_specification*/
+DROP TABLE car_shop.car_specification CASCADE;
+
+/*Удаление таблицы car_specification_possible*/
+DROP TABLE car_shop.car_specification_possible CASCADE;
+
+/*Наполнение таблицы car_specification всеми возможными комбинациями моделей и цветов*/
+
+INSERT INTO car_shop.car_specification (model_id, color_id)
+SELECT model.id, color.id
+FROM car_shop.model AS model
+CROSS JOIN car_shop.color AS color;
+
+/*Тестовый запрос, чтобы посмотреть, какой car_id из таблицы car_specification нужно взять, чтобы внести его
+в таблицу sales*/
+WITH sraw AS (
+    SELECT 
+        id, 
+        auto, 
+        REPLACE(
+            SPLIT_PART(SPLIT_PART(auto, ' ', 2) || ' ' || SPLIT_PART(auto, ' ', 3), ', ', 1), 
+            ',', ''
+        ) AS model, 
+        TRIM(SPLIT_PART(auto, ',', 2)) AS color
+    FROM raw_data.sales
+)
+SELECT 
+    snew.id, 
+    snew.car_id, 
+    sraw.id, 
+    sraw.auto, 
+    sraw.model, 
+    sraw.color,
+    m.id AS model_id, 
+    m.model,
+    c.id AS color_id,
+    c.color,
+    cs.id AS car_id
+FROM car_shop.sales AS snew
+INNER JOIN sraw ON sraw.id = snew.id
+LEFT JOIN car_shop.model AS m ON m.model = sraw.model
+LEFT JOIN car_shop.color AS c ON c.color = sraw.color
+LEFT JOIN car_shop.car_specification AS cs ON (m.id = cs.model_id AND c.id = cs.color_id)
+WHERE m.model = sraw.model AND c.color = sraw.color
+ORDER BY snew.id;
+
+/*Наполнение поля car_id таблицы продаж car_shop.sales*/
+
+WITH sraw AS (
+    SELECT 
+        id, 
+        auto, 
+        REPLACE(
+            SPLIT_PART(SPLIT_PART(auto, ' ', 2) || ' ' || SPLIT_PART(auto, ' ', 3), ', ', 1), 
+            ',', ''
+        ) AS model, 
+        TRIM(SPLIT_PART(auto, ',', 2)) AS color
+    FROM raw_data.sales
+),
+temporary_table AS (
+SELECT 
+    snew.id, 
+    cs.id AS car_id
+FROM car_shop.sales AS snew
+INNER JOIN sraw ON sraw.id = snew.id
+LEFT JOIN car_shop.model AS m ON m.model = sraw.model
+LEFT JOIN car_shop.color AS c ON c.color = sraw.color
+LEFT JOIN car_shop.car_specification AS cs ON (m.id = cs.model_id AND c.id = cs.color_id)
+WHERE m.model = sraw.model AND c.color = sraw.color
+ORDER BY snew.id  
+)
+UPDATE car_shop.sales
+SET car_id = temporary_table.car_id
+FROM temporary_table
+WHERE car_shop.sales.id = temporary_table.id;
+
+/*СТАРЫЕ КОММЕНТАРИИ от 19 сентября 2024*/
 /*Добавьте в этот файл запросы, которые наполняют данными таблицы в схеме автосалона*/
 
 /*Наполнение таблицы цветов машин color сырыми данными*/

@@ -1,3 +1,12 @@
+/*НОВЫЕ КОММЕНТАРИИ от 22 сентября 2024*/
+
+SELECT 
+    (COUNT(DISTINCT id) FILTER (WHERE gasoline_consumption IS NULL) * 100.0) 
+    / 
+    COUNT(DISTINCT id) AS nulls_percentage_gasoline_consumption
+FROM car_shop.model;
+
+/*СТАРЫЕ КОММЕНТАРИИ от 19 сентября 2024*/
 /*добавьте сюда запрос для решения задания 1*/
 
 /*РЕШЕНИЕ. Запрос к финальной таблице*/
